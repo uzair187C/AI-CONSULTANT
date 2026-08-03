@@ -1,0 +1,898 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AdmitDE — Germany University Admissions</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg-primary: #0D0F12;
+      --bg-surface: #161A20;
+      --bg-elevated: #1E2229;
+      --border: #2A2F38;
+      --text-primary: #F0F2F5;
+      --text-secondary: #8A9099;
+      --text-muted: #4A5260;
+      --accent-green: #22C55E;
+      --accent-amber: #F59E0B;
+      --accent-red: #EF4444;
+      --accent-blue: #3B82F6;
+      --accent-blue-dim: #1D4ED8;
+    }
+    * { box-sizing: border-box; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      margin: 0;
+      min-height: 100vh;
+    }
+    .font-mono { font-family: 'JetBrains Mono', monospace; }
+    .tier-strong { border-left: 3px solid var(--accent-green); }
+    .tier-borderline { border-left: 3px solid var(--accent-amber); }
+    .tier-not_eligible { border-left: 3px solid var(--accent-red); }
+    .pill-active { background: var(--accent-blue-dim); color: white; }
+    .pill-inactive { background: var(--bg-elevated); color: var(--text-secondary); border: 1px solid var(--border); }
+    input:focus, select:focus, button:focus-visible {
+      outline: 2px solid var(--accent-blue);
+      outline-offset: 2px;
+    }
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 0.4; }
+      50% { opacity: 1; }
+    }
+    .loader-dot { animation: pulse-dot 1.4s ease-in-out infinite; }
+    .loader-dot:nth-child(2) { animation-delay: 0.2s; }
+    .loader-dot:nth-child(3) { animation-delay: 0.4s; }
+    .card-hover:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.3); }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+
+    // Paste your Groq API key here or leave empty to use pre-computed analysis
+    const GROQ_API_KEY = '';
+
+    const APS_COUNTRIES = ['Pakistan', 'India', 'China', 'Vietnam', 'Mongolia'];
+    const FIELD_OPTIONS = ['CS', 'AI', 'Data Science', 'SE'];
+    const CITY_OPTIONS = ['Munich', 'Berlin', 'Hamburg', 'Aachen', 'Karlsruhe', 'Dresden', 'Bonn', 'Saarbrücken', 'Stuttgart', 'Freiburg', 'Erlangen', 'No Preference'];
+    const NATIONALITIES = ['Pakistan', 'India', 'Bangladesh', 'China', 'Vietnam', 'Mongolia', 'Nepal', 'Sri Lanka', 'Egypt', 'Nigeria', 'Other'];
+    const GERMAN_LEVELS = ['None', 'A1', 'A2', 'B1', 'B2', 'C1', 'C2', 'DSH-1', 'DSH-2', 'TestDaF-4x4'];
+
+    const UNIVERSITY_DATA = [
+      {
+        id: 'tum', name: 'Technical University of Munich', city: 'Munich', state: 'Bavaria', qs_ranking_cs: 50, public: true,
+        programs: [
+          {
+            degree: 'MS', name: 'MS Informatics', field_tags: ['CS', 'AI', 'SE'],
+            language: 'English', duration_semesters: 4, min_german_grade: 2.5,
+            english_requirement: { ielts_min: 7.0, toefl_min: 95, exempt_if: ['German-taught program', 'Prior English-medium degree'] },
+            german_requirement: { min_level: 'None', note: 'English-taught program' },
+            aps_required_nationalities: APS_COUNTRIES, intake: ['Winter'],
+            application_portal: 'direct', application_portal_url_label: 'Apply via TUMonline (direct)',
+            deadlines: { winter: 'January 15', summer: 'N/A' },
+            tuition_eur_per_semester: 0, semester_contribution_eur: 150,
+            notes: 'Highly competitive. Motivation letter and CV carry significant weight.'
+          },
+          {
+            degree: 'BS', name: 'BS Informatics', field_tags: ['CS', 'AI', 'SE'],
+            language: 'German', duration_semesters: 6, min_german_grade: 2.5,
+            english_requirement: { ielts_min: null, toefl_min: null, exempt_if: [] },
+            german_requirement: { min_level: 'DSH-2', note: 'DSH-2 or TestDaF (4x4) required — equivalent to C1' },
+            aps_required_nationalities: APS_COUNTRIES, intake: ['Winter'],
+            application_portal: 'direct', application_portal_url_label: 'Apply via TUMonline (direct)',
+            deadlines: { winter: 'January 15', summer: 'N/A' },
+            tuition_eur_per_semester: 0, semester_contribution_eur: 150,
+            notes: 'HZB equivalency check via anabin required.'
+          }
+        ]
+      },
+      {
+        id: 'rwth', name: 'RWTH Aachen University', city: 'Aachen', state: 'NRW', qs_ranking_cs: 100, public: true,
+        programs: [
+          {
+            degree: 'MS', name: 'MS Computer Science', field_tags: ['CS', 'AI', 'SE'],
+            language: 'English', duration_semesters: 4, min_german_grade: 2.5,
+            english_requirement: { ielts_min: 6.5, toefl_min: 90, exempt_if: [] },
+            german_requirement: { min_level: 'None', note: 'Some German modules optional' },
+            aps_required_nationalities: APS_COUNTRIES, intake: ['Winter', 'Summer'],
+            application_portal: 'direct', application_portal_url_label: 'Apply via RWTH Campus (direct)',
+            deadlines: { winter: 'March 1', summer: 'September 1' },
+            tuition_eur_per_semester: 0, semester_contribution_eur: 300,
+            notes: 'Strong industry connections; automotive and embedded systems focus.'
+          },
+          {
+            degree: 'BS', name: 'BS Computer Science', field_tags: ['CS', 'SE'],
+            language: 'German', duration_semesters: 6, min_german_grade: 2.5,
+            english_requirement: { ielts_min: null, toefl_min: null, exempt_if: [] },
+            german_requirement: { min_level: 'DSH-2', note: 'DSH-2 or TestDaF (4x4) required' },
+            aps_required_nationalities: APS_COUNTRIES, intake: ['Winter'],
+            application_portal: 'direct', application_portal_url_label: 'Apply via RWTH Campus (direct)',
+            deadlines: { winter: 'July 15', summer: 'N/A' },
+            tuition_eur_per_semester: 0, semester_contribution_eur: 300,
+            notes: 'NC (numerus clausus) applies based on applicant pool.'
+          }
+        ]
+      },
+      {
+        id: 'tu-berlin', name: 'TU Berlin', city: 'Berlin', state: 'Berlin', qs_ranking_cs: 150, public: true,
+        programs: [
+          {
+            degree: 'MS', name: 'MS Computer Science', field_tags: ['CS', 'AI', 'Data Science', 'SE'],
+            language: 'English', duration_semesters: 4, min_german_grade: 2.5,
+            english_requirement: { ielts_min: 7.0, toefl_min: 100, exempt_if: [] },
+            german_requirement: { min_level: 'None', note: 'English-taught program' },
+            aps_required_nationalities: APS_COUNTRIES, intake: ['Winter', 'Summer'],
+            application_portal: 'direct', application_portal_url_label: 'Apply via TU Berlin portal (direct)',
+            deadlines: { winter: 'May 31', summer: 'November 30' },
+            tuition_eur_per_semester: 0, semester_contribution_eur: 300,
+            notes: 'Very international cohort. Berlin has no tuition at all.'
+          },
+          {
+            degree: 'BS', name: 'BS Computer Science', field_tags: ['CS', 'SE'],
+            language: 'German', duration_semesters: 6, min_german_grade: 2.5,
+            english_requirement: { ielts_min: null, toefl_min: null, exempt_if: [] },
+            german_requirement: { min_level: 'DSH-2', note: 'DSH-2 or TestDaF (4x4) required' },
+            aps_required_nationalities: APS_COUNTRIES, intake: ['Winter', 'Summer'],
+            application_portal: 'direct', application_portal_url_label: 'Apply via TU Berlin portal (direct)',
+            deadlines: { winter: 'July 15', summer: 'January 15' },
+            tuition_eur_per_semester: 0, semester_contribution_eur: 300,
+            notes: 'NC applies.'
+          }
+        ]
+      },
+      {
+        id: 'kit', name: 'Karlsruhe Institute of Technology (KIT)', city: 'Karlsruhe', state: 'Baden-Württemberg', qs_ranking_cs: 130, public: true,
+        programs: [{
+          degree: 'MS', name: 'MS Computer Science', field_tags: ['CS', 'AI', 'SE'],
+          language: 'English', duration_semesters: 4, min_german_grade: 2.5,
+          english_requirement: { ielts_min: 6.5, toefl_min: 90, exempt_if: [] },
+          german_requirement: { min_level: 'None', note: 'English-taught program' },
+          aps_required_nationalities: APS_COUNTRIES, intake: ['Winter', 'Summer'],
+          application_portal: 'direct', application_portal_url_label: 'Apply via KIT Campus Management (direct)',
+          deadlines: { winter: 'May 15', summer: 'November 15' },
+          tuition_eur_per_semester: 0, semester_contribution_eur: 170,
+          notes: 'Top research output; strong in theoretical CS and AI.'
+        }]
+      },
+      {
+        id: 'fau', name: 'FAU Erlangen-Nürnberg', city: 'Erlangen', state: 'Bavaria', qs_ranking_cs: null, public: true,
+        programs: [{
+          degree: 'MS', name: 'MS Artificial Intelligence', field_tags: ['AI', 'CS'],
+          language: 'English', duration_semesters: 4, min_german_grade: 2.5,
+          english_requirement: { ielts_min: 7.0, toefl_min: 95, exempt_if: [] },
+          german_requirement: { min_level: 'None', note: 'English-taught program' },
+          aps_required_nationalities: APS_COUNTRIES, intake: ['Winter'],
+          application_portal: 'direct', application_portal_url_label: 'Apply via campo (direct)',
+          deadlines: { winter: 'May 15', summer: 'N/A' },
+          tuition_eur_per_semester: 0, semester_contribution_eur: 130,
+          notes: 'One of the few dedicated MS AI programs at a public German university.'
+        }]
+      },
+      {
+        id: 'lmu', name: 'LMU Munich', city: 'Munich', state: 'Bavaria', qs_ranking_cs: null, public: true,
+        programs: [{
+          degree: 'MS', name: 'MS Data Science', field_tags: ['Data Science', 'AI', 'CS'],
+          language: 'English', duration_semesters: 4, min_german_grade: 2.5,
+          english_requirement: { ielts_min: 7.0, toefl_min: 95, exempt_if: [] },
+          german_requirement: { min_level: 'None', note: 'English-taught program' },
+          aps_required_nationalities: APS_COUNTRIES, intake: ['Winter'],
+          application_portal: 'direct', application_portal_url_label: 'Apply via LMU Portal (direct)',
+          deadlines: { winter: 'January 15', summer: 'N/A' },
+          tuition_eur_per_semester: 0, semester_contribution_eur: 150,
+          notes: 'Joint program with TUM in some modules. Very data-engineering focused.'
+        }]
+      },
+      {
+        id: 'stuttgart', name: 'University of Stuttgart', city: 'Stuttgart', state: 'Baden-Württemberg', qs_ranking_cs: null, public: true,
+        programs: [{
+          degree: 'MS', name: 'MS Computer Science', field_tags: ['CS', 'AI', 'SE'],
+          language: 'English', duration_semesters: 4, min_german_grade: 2.5,
+          english_requirement: { ielts_min: 6.5, toefl_min: 90, exempt_if: [] },
+          german_requirement: { min_level: 'None', note: 'English-taught program' },
+          aps_required_nationalities: APS_COUNTRIES, intake: ['Winter', 'Summer'],
+          application_portal: 'direct', application_portal_url_label: 'Apply directly on Stuttgart portal',
+          deadlines: { winter: 'May 15', summer: 'November 15' },
+          tuition_eur_per_semester: 0, semester_contribution_eur: 170,
+          notes: 'Strong in robotics, autonomous systems, and HCI.'
+        }]
+      },
+      {
+        id: 'saarland', name: 'Saarland University', city: 'Saarbrücken', state: 'Saarland', qs_ranking_cs: null, public: true,
+        programs: [{
+          degree: 'MS', name: 'MS Computer Science', field_tags: ['CS', 'AI', 'SE'],
+          language: 'English', duration_semesters: 4, min_german_grade: 2.8,
+          english_requirement: { ielts_min: 6.0, toefl_min: 80, exempt_if: [] },
+          german_requirement: { min_level: 'None', note: 'English-taught program' },
+          aps_required_nationalities: APS_COUNTRIES, intake: ['Winter', 'Summer'],
+          application_portal: 'direct', application_portal_url_label: 'Apply directly on Saarland portal',
+          deadlines: { winter: 'May 31', summer: 'November 30' },
+          tuition_eur_per_semester: 0, semester_contribution_eur: 290,
+          notes: 'Home to Max Planck Institute for CS and CISPA. Excellent for research track.'
+        }]
+      },
+      {
+        id: 'dresden', name: 'TU Dresden', city: 'Dresden', state: 'Saxony', qs_ranking_cs: null, public: true,
+        programs: [{
+          degree: 'MS', name: 'MS Computer Science', field_tags: ['CS', 'AI', 'SE'],
+          language: 'English', duration_semesters: 4, min_german_grade: 2.5,
+          english_requirement: { ielts_min: 7.0, toefl_min: 95, exempt_if: [] },
+          german_requirement: { min_level: 'None', note: 'English-taught program' },
+          aps_required_nationalities: APS_COUNTRIES, intake: ['Winter'],
+          application_portal: 'uni-assist', application_portal_url_label: 'Apply via uni-assist',
+          deadlines: { winter: 'May 31', summer: 'N/A' },
+          tuition_eur_per_semester: 0, semester_contribution_eur: 280,
+          notes: 'Part of the German Excellence Initiative universities.'
+        }]
+      },
+      {
+        id: 'bonn', name: 'University of Bonn', city: 'Bonn', state: 'NRW', qs_ranking_cs: null, public: true,
+        programs: [{
+          degree: 'MS', name: 'MS Computer Science', field_tags: ['CS', 'AI', 'Data Science'],
+          language: 'English', duration_semesters: 4, min_german_grade: 2.5,
+          english_requirement: { ielts_min: 6.5, toefl_min: 90, exempt_if: [] },
+          german_requirement: { min_level: 'None', note: 'English-taught program' },
+          aps_required_nationalities: APS_COUNTRIES, intake: ['Winter', 'Summer'],
+          application_portal: 'direct', application_portal_url_label: 'Apply directly on Bonn portal',
+          deadlines: { winter: 'May 31', summer: 'November 30' },
+          tuition_eur_per_semester: 0, semester_contribution_eur: 300,
+          notes: 'Close ties to Fraunhofer IAIS (AI research institute).'
+        }]
+      },
+      {
+        id: 'freiburg', name: 'University of Freiburg', city: 'Freiburg', state: 'Baden-Württemberg', qs_ranking_cs: null, public: true,
+        programs: [{
+          degree: 'MS', name: 'MS Computer Science', field_tags: ['CS', 'AI', 'Data Science'],
+          language: 'English', duration_semesters: 4, min_german_grade: 2.8,
+          english_requirement: { ielts_min: 6.5, toefl_min: 90, exempt_if: [] },
+          german_requirement: { min_level: 'None', note: 'Partial German modules optional' },
+          aps_required_nationalities: APS_COUNTRIES, intake: ['Winter'],
+          application_portal: 'uni-assist', application_portal_url_label: 'Apply via uni-assist',
+          deadlines: { winter: 'May 15', summer: 'N/A' },
+          tuition_eur_per_semester: 0, semester_contribution_eur: 170,
+          notes: 'Known for bioinformatics and machine learning research groups.'
+        }]
+      },
+      {
+        id: 'hamburg', name: 'University of Hamburg', city: 'Hamburg', state: 'Hamburg', qs_ranking_cs: null, public: true,
+        programs: [{
+          degree: 'MS', name: 'MS Computer Science', field_tags: ['CS', 'AI', 'SE'],
+          language: 'Bilingual', duration_semesters: 4, min_german_grade: 2.5,
+          english_requirement: { ielts_min: 6.5, toefl_min: 90, exempt_if: [] },
+          german_requirement: { min_level: 'B2', note: 'B2 required for bilingual modules' },
+          aps_required_nationalities: APS_COUNTRIES, intake: ['Winter'],
+          application_portal: 'direct', application_portal_url_label: 'Apply directly on Hamburg portal',
+          deadlines: { winter: 'June 1', summer: 'N/A' },
+          tuition_eur_per_semester: 0, semester_contribution_eur: 330,
+          notes: 'Largest city campus in Germany; strong industry access.'
+        }]
+      }
+    ];
+
+    function convertGPA(format, value) {
+      const v = parseFloat(value);
+      if (isNaN(v)) return null;
+      if (format === 'percentage') return 1 + 3 * (100 - v) / 50;
+      if (format === '4.0') return 1 + 3 * (4.0 - v) / 3.0;
+      return v;
+    }
+
+    function meetsGermanRequirement(userLevel, required) {
+      if (!required || required === 'None') return true;
+      const order = ['None', 'A1', 'A2', 'B1', 'B2', 'C1', 'C2', 'DSH-1', 'DSH-2', 'TestDaF-4x4'];
+      const normalize = (l) => {
+        if (l === 'DSH-2' || l === 'TestDaF-4x4') return 8;
+        if (l === 'DSH-1') return 7;
+        return order.indexOf(l);
+      };
+      return normalize(userLevel || 'None') >= normalize(required);
+    }
+
+    function matchUniversity(profile, program) {
+      const issues = [];
+      const passes = [];
+
+      if (profile.german_grade > program.min_german_grade) {
+        issues.push({ field: 'GPA', detail: `Minimum ${program.min_german_grade} required, you have ${profile.german_grade.toFixed(2)}` });
+      } else {
+        passes.push({ field: 'GPA', detail: `Meets minimum GPA requirement (${profile.german_grade.toFixed(2)} / required ≤ ${program.min_german_grade})` });
+      }
+
+      if (program.language === 'English' || program.language === 'Bilingual') {
+        if (profile.ielts === null) {
+          issues.push({ field: 'IELTS', detail: 'English test score required for this program' });
+        } else if (profile.ielts < program.english_requirement.ielts_min) {
+          issues.push({ field: 'IELTS', detail: `Minimum ${program.english_requirement.ielts_min} required, you have ${profile.ielts}` });
+        } else {
+          passes.push({ field: 'IELTS', detail: `IELTS ${profile.ielts} meets requirement (min ${program.english_requirement.ielts_min})` });
+        }
+      }
+
+      if (program.language === 'German' || program.language === 'Bilingual') {
+        const required = program.german_requirement.min_level;
+        if (!meetsGermanRequirement(profile.german_level, required)) {
+          issues.push({ field: 'German', detail: `${required} required, you have ${profile.german_level || 'None'}` });
+        } else {
+          passes.push({ field: 'German', detail: 'German language level meets requirement' });
+        }
+      }
+
+      const apsRequired = program.aps_required_nationalities.includes(profile.nationality);
+      if (apsRequired && !profile.aps_certified) {
+        issues.push({ field: 'APS Certificate', detail: 'APS Certificate required for your nationality. 6–8 weeks processing time.' });
+      } else if (apsRequired) {
+        passes.push({ field: 'APS Certificate', detail: 'APS certified ✓' });
+      }
+
+      if (program.degree === 'MS' && !profile.has_bachelor) {
+        issues.push({ field: 'Bachelor Degree', detail: "MS programs require a completed bachelor's degree" });
+      } else if (program.degree === 'MS') {
+        passes.push({ field: 'Bachelor Degree', detail: "Bachelor's degree requirement met" });
+      }
+
+      if (profile.preferred_intake !== 'Both' && !program.intake.includes(profile.preferred_intake)) {
+        issues.push({ field: 'Intake', detail: `This program only offers ${program.intake.join('/')} intake` });
+      } else if (profile.preferred_intake !== 'Both') {
+        passes.push({ field: 'Intake', detail: `${profile.preferred_intake} intake available` });
+      }
+
+      let tier;
+      if (issues.length === 0) tier = 'strong';
+      else if (issues.length <= 2) tier = 'borderline';
+      else tier = 'not_eligible';
+
+      return { tier, issues, passes };
+    }
+
+    function filterAndMatch(profile, prefs) {
+      const results = [];
+      UNIVERSITY_DATA.forEach(uni => {
+        uni.programs.forEach(program => {
+          if (program.degree !== profile.degree_target) return;
+          if (!program.field_tags.some(t => profile.fields.includes(t))) return;
+          if (prefs.language_pref === 'English' && program.language === 'German') return;
+          if (prefs.language_pref === 'German' && program.language === 'English') return;
+
+          const match = matchUniversity(profile, program);
+          results.push({ uni, program, ...match });
+        });
+      });
+
+      const tierOrder = { strong: 0, borderline: 1, not_eligible: 2 };
+      results.sort((a, b) => {
+        const cityA = prefs.cities.includes('No Preference') || prefs.cities.includes(a.uni.city) ? 0 : 1;
+        const cityB = prefs.cities.includes('No Preference') || prefs.cities.includes(b.uni.city) ? 0 : 1;
+        if (cityA !== cityB) return cityA - cityB;
+        return tierOrder[a.tier] - tierOrder[b.tier];
+      });
+      return results;
+    }
+
+    function buildMatchSummary(results) {
+      const strong = results.filter(r => r.tier === 'strong').length;
+      const borderline = results.filter(r => r.tier === 'borderline').length;
+      const notEligible = results.filter(r => r.tier === 'not_eligible').length;
+      const gapCounts = {};
+      results.forEach(r => r.issues.forEach(i => { gapCounts[i.field] = (gapCounts[i.field] || 0) + 1; }));
+      const topMissing = Object.entries(gapCounts).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([f]) => f);
+      const topStrength = results.some(r => r.passes.some(p => p.field === 'GPA'))
+        ? 'GPA meets most university thresholds' : 'Profile partially matches some programs';
+      return { strong_match_count: strong, borderline_count: borderline, not_eligible_count: notEligible, top_missing_requirements: topMissing, top_strength: topStrength };
+    }
+
+    async function callGroq(profile, matchSummary) {
+      const payload = {
+        model: 'llama-3.3-70b-versatile',
+        max_tokens: 1000,
+        messages: [
+          {
+            role: 'system',
+            content: `You are a Germany university admissions consultant. You receive a structured JSON of a student's profile and a pre-computed match analysis. Your job is to write a 2–3 sentence honest consultation summary — what is their strongest asset, their biggest blocker, and one specific actionable recommendation. Be direct. Do not use filler phrases. Do not say "It seems like" or "Based on the information provided".`
+          },
+          {
+            role: 'user',
+            content: JSON.stringify({ profile, match_summary: matchSummary })
+          }
+        ]
+      };
+      const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${GROQ_API_KEY}` },
+        body: JSON.stringify(payload)
+      });
+      if (!res.ok) throw new Error('Groq API failed');
+      const data = await res.json();
+      return data.choices[0].message.content;
+    }
+
+    const INITIAL_PROFILE = {
+      nationality: 'Pakistan', degree_target: 'MS', has_bachelor: true, bachelor_status: 'yes',
+      gpa_format: 'percentage', gpa_value: '', ielts: '', ielts_not_taken: false,
+      german_level: 'None', aps_certified: false, aps_na: false, fields: ['CS']
+    };
+    const INITIAL_PREFS = { cities: ['No Preference'], preferred_intake: 'Both', language_pref: 'Both' };
+
+    function StepIndicator({ step }) {
+      return (
+        <div className="flex items-center justify-center gap-3 mb-8">
+          {[1, 2].map(s => (
+            <div key={s} className="flex items-center gap-2">
+              <div className={`w-2.5 h-2.5 rounded-full ${step >= s ? 'bg-blue-500' : 'bg-[#2A2F38]'}`} />
+              <span className={`font-mono text-xs uppercase tracking-widest ${step >= s ? 'text-[#F0F2F5]' : 'text-[#4A5260]'}`}>Step {s}</span>
+              {s === 1 && <div className="w-8 h-px bg-[#2A2F38] ml-1" />}
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    function Pill({ active, onClick, children }) {
+      return (
+        <button type="button" onClick={onClick}
+          className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${active ? 'pill-active' : 'pill-inactive'}`}>
+          {children}
+        </button>
+      );
+    }
+
+    function ProfileForm({ profile, setProfile, onNext }) {
+      const [errors, setErrors] = useState({});
+
+      const validate = () => {
+        const e = {};
+        const v = parseFloat(profile.gpa_value);
+        if (!profile.gpa_value) e.gpa = 'GPA is required';
+        else if (profile.gpa_format === 'percentage' && (v < 0 || v > 100)) e.gpa = 'Percentage must be 0–100';
+        else if (profile.gpa_format === '4.0' && (v < 0 || v > 4)) e.gpa = 'GPA must be 0–4.0';
+        else if (profile.gpa_format === 'german' && (v < 1 || v > 5)) e.gpa = 'German grade must be 1.0–5.0';
+        if (!profile.ielts_not_taken && profile.ielts !== '' && (parseFloat(profile.ielts) < 0 || parseFloat(profile.ielts) > 9)) e.ielts = 'IELTS must be 0–9';
+        setErrors(e);
+        return Object.keys(e).length === 0;
+      };
+
+      const handleNext = () => { if (validate()) onNext(); };
+
+      const toggleField = (f) => {
+        setProfile(p => ({
+          ...p,
+          fields: p.fields.includes(f) ? (p.fields.length > 1 ? p.fields.filter(x => x !== f) : p.fields) : [...p.fields, f]
+        }));
+      };
+
+      return (
+        <div className="max-w-[560px] mx-auto">
+          <StepIndicator step={1} />
+          <h2 className="text-2xl font-semibold mb-6 tracking-tight">Academic Profile</h2>
+
+          <div className="space-y-5">
+            <div>
+              <label className="font-mono text-xs uppercase tracking-widest text-[#8A9099] block mb-2">Nationality</label>
+              <select value={profile.nationality} onChange={e => setProfile(p => ({ ...p, nationality: e.target.value }))}
+                className="w-full bg-[#161A20] border border-[#2A2F38] rounded-lg px-4 py-3 text-[#F0F2F5]">
+                {NATIONALITIES.map(n => <option key={n} value={n}>{n}</option>)}
+              </select>
+            </div>
+
+            <div>
+              <label className="font-mono text-xs uppercase tracking-widest text-[#8A9099] block mb-2">Applying for</label>
+              <div className="flex gap-2">
+                {['BS', 'MS'].map(d => (
+                  <Pill key={d} active={profile.degree_target === d} onClick={() => setProfile(p => ({ ...p, degree_target: d }))}>{d}</Pill>
+                ))}
+              </div>
+            </div>
+
+            {profile.degree_target === 'MS' && (
+              <div>
+                <label className="font-mono text-xs uppercase tracking-widest text-[#8A9099] block mb-2">Completed Bachelor's?</label>
+                <div className="flex gap-2 flex-wrap">
+                  {[['Yes', 'yes'], ['No', 'no'], ['In progress', 'progress']].map(([label, val]) => (
+                    <Pill key={label} active={profile.bachelor_status === val}
+                      onClick={() => setProfile(p => ({ ...p, bachelor_status: val, has_bachelor: val === 'yes' }))}>{label}</Pill>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div>
+              <label className="font-mono text-xs uppercase tracking-widest text-[#8A9099] block mb-2">GPA Format</label>
+              <div className="flex gap-2 flex-wrap mb-3">
+                {[['percentage', 'Percentage'], ['4.0', '4.0 Scale'], ['german', 'German 1–5']].map(([k, l]) => (
+                  <Pill key={k} active={profile.gpa_format === k} onClick={() => setProfile(p => ({ ...p, gpa_format: k }))}>{l}</Pill>
+                ))}
+              </div>
+              <input type="number" step="0.01" value={profile.gpa_value}
+                onChange={e => setProfile(p => ({ ...p, gpa_value: e.target.value }))}
+                placeholder={profile.gpa_format === 'percentage' ? 'e.g. 80' : profile.gpa_format === '4.0' ? 'e.g. 3.5' : 'e.g. 2.2'}
+                className={`w-full bg-[#161A20] border rounded-lg px-4 py-3 text-[#F0F2F5] ${errors.gpa ? 'border-red-500' : 'border-[#2A2F38]'}`} />
+              {errors.gpa && <p className="text-red-400 text-sm mt-1">{errors.gpa}</p>}
+            </div>
+
+            <div>
+              <label className="font-mono text-xs uppercase tracking-widest text-[#8A9099] block mb-2">IELTS Score</label>
+              <div className="flex gap-2 items-center">
+                <input type="number" step="0.5" min="0" max="9" value={profile.ielts} disabled={profile.ielts_not_taken}
+                  onChange={e => setProfile(p => ({ ...p, ielts: e.target.value }))}
+                  placeholder="e.g. 6.5"
+                  className={`flex-1 bg-[#161A20] border rounded-lg px-4 py-3 text-[#F0F2F5] ${errors.ielts ? 'border-red-500' : 'border-[#2A2F38]'} ${profile.ielts_not_taken ? 'opacity-50' : ''}`} />
+                <Pill active={profile.ielts_not_taken} onClick={() => setProfile(p => ({ ...p, ielts_not_taken: !p.ielts_not_taken, ielts: '' }))}>Not taken</Pill>
+              </div>
+              {errors.ielts && <p className="text-red-400 text-sm mt-1">{errors.ielts}</p>}
+            </div>
+
+            <div>
+              <label className="font-mono text-xs uppercase tracking-widest text-[#8A9099] block mb-2">German Language Level</label>
+              <select value={profile.german_level} onChange={e => setProfile(p => ({ ...p, german_level: e.target.value }))}
+                className="w-full bg-[#161A20] border border-[#2A2F38] rounded-lg px-4 py-3 text-[#F0F2F5]">
+                {GERMAN_LEVELS.map(l => <option key={l} value={l}>{l}</option>)}
+              </select>
+            </div>
+
+            <div>
+              <label className="font-mono text-xs uppercase tracking-widest text-[#8A9099] block mb-2">APS Certificate</label>
+              <div className="flex gap-2 flex-wrap">
+                <Pill active={profile.aps_certified && !profile.aps_na} onClick={() => setProfile(p => ({ ...p, aps_certified: true, aps_na: false }))}>Yes</Pill>
+                <Pill active={!profile.aps_certified && !profile.aps_na} onClick={() => setProfile(p => ({ ...p, aps_certified: false, aps_na: false }))}>No</Pill>
+                <Pill active={profile.aps_na} onClick={() => setProfile(p => ({ ...p, aps_certified: false, aps_na: true }))}>Not Applicable</Pill>
+              </div>
+            </div>
+
+            <div>
+              <label className="font-mono text-xs uppercase tracking-widest text-[#8A9099] block mb-2">Target Field</label>
+              <div className="flex gap-2 flex-wrap">
+                {FIELD_OPTIONS.map(f => (
+                  <Pill key={f} active={profile.fields.includes(f)} onClick={() => toggleField(f)}>{f}</Pill>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <button onClick={handleNext}
+            className="mt-8 w-full bg-[#1D4ED8] hover:bg-blue-600 text-white font-semibold py-3 rounded-lg transition-colors">
+            Continue to Preferences →
+          </button>
+        </div>
+      );
+    }
+
+    function PreferencesForm({ prefs, setPrefs, onBack, onSubmit }) {
+      const toggleCity = (c) => {
+        if (c === 'No Preference') {
+          setPrefs(p => ({ ...p, cities: ['No Preference'] }));
+        } else {
+          setPrefs(p => {
+            const filtered = p.cities.filter(x => x !== 'No Preference');
+            const next = filtered.includes(c) ? filtered.filter(x => x !== c) : [...filtered, c];
+            return { ...p, cities: next.length ? next : ['No Preference'] };
+          });
+        }
+      };
+
+      return (
+        <div className="max-w-[560px] mx-auto">
+          <StepIndicator step={2} />
+          <h2 className="text-2xl font-semibold mb-6 tracking-tight">Preferences</h2>
+
+          <div className="space-y-5">
+            <div>
+              <label className="font-mono text-xs uppercase tracking-widest text-[#8A9099] block mb-2">Preferred City</label>
+              <div className="flex gap-2 flex-wrap">
+                {CITY_OPTIONS.map(c => (
+                  <Pill key={c} active={prefs.cities.includes(c)} onClick={() => toggleCity(c)}>{c}</Pill>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label className="font-mono text-xs uppercase tracking-widest text-[#8A9099] block mb-2">Semester Intake</label>
+              <div className="flex gap-2">
+                {['Winter', 'Summer', 'Both'].map(i => (
+                  <Pill key={i} active={prefs.preferred_intake === i} onClick={() => setPrefs(p => ({ ...p, preferred_intake: i }))}>{i}</Pill>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label className="font-mono text-xs uppercase tracking-widest text-[#8A9099] block mb-2">Language of Instruction</label>
+              <div className="flex gap-2">
+                {['German', 'English', 'Both'].map(l => (
+                  <Pill key={l} active={prefs.language_pref === l} onClick={() => setPrefs(p => ({ ...p, language_pref: l }))}>{l}</Pill>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="flex gap-3 mt-8">
+            <button onClick={onBack} className="flex-1 bg-[#1E2229] border border-[#2A2F38] text-[#F0F2F5] font-semibold py-3 rounded-lg">← Back</button>
+            <button onClick={onSubmit} className="flex-1 bg-[#1D4ED8] hover:bg-blue-600 text-white font-semibold py-3 rounded-lg">Run Analysis →</button>
+          </div>
+        </div>
+      );
+    }
+
+    function AnalysisLoader({ message }) {
+      return (
+        <div className="max-w-md mx-auto text-center py-20">
+          <div className="flex justify-center gap-2 mb-6">
+            <div className="loader-dot w-2 h-2 rounded-full bg-blue-500" />
+            <div className="loader-dot w-2 h-2 rounded-full bg-blue-500" />
+            <div className="loader-dot w-2 h-2 rounded-full bg-blue-500" />
+          </div>
+          <p className="font-mono text-sm text-[#8A9099] uppercase tracking-widest">{message}</p>
+        </div>
+      );
+    }
+
+    function APSBanner() {
+      return (
+        <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-4 mb-6">
+          <p className="font-semibold text-amber-400 mb-1">⚠ APS Certificate Required</p>
+          <p className="text-sm text-[#8A9099]">Your nationality requires an APS certificate for German university applications. APS certificates take 6–8 weeks. Apply early at <span className="text-blue-400">aps-islamabad.diplo.de</span> (Pakistan) or your country's APS authority.</p>
+        </div>
+      );
+    }
+
+    function BSWarningBanner() {
+      return (
+        <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-4 mb-6">
+          <p className="text-sm text-[#F0F2F5]"><strong>Important:</strong> Almost all BS programs at German public universities are taught in German. If you're targeting an English-language bachelor's, you'll need to look at private institutions (fees apply) or plan to reach DSH-2 / TestDaF level first.</p>
+        </div>
+      );
+    }
+
+    function ConsultationSummary({ text, unavailable }) {
+      return (
+        <div className="bg-[#161A20] border border-[#2A2F38] rounded-lg p-6 mb-8 border-l-4 border-l-blue-500">
+          <div className="flex items-start gap-3">
+            <span className="text-2xl">🎓</span>
+            <div>
+              <p className="font-mono text-xs uppercase tracking-widest text-[#8A9099] mb-2">AI Consultation</p>
+              <p className="text-[#F0F2F5] leading-relaxed italic">{unavailable ? 'AI summary unavailable. Showing raw match analysis.' : text}</p>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    function UniversityCard({ result, preferredIntake }) {
+      const { uni, program, tier, issues, passes } = result;
+      const tierLabel = { strong: 'STRONG MATCH', borderline: 'BORDERLINE', not_eligible: 'NOT ELIGIBLE' };
+      const tierColor = { strong: 'text-green-400', borderline: 'text-amber-400', not_eligible: 'text-red-400' };
+      const deadline = preferredIntake === 'Summer' && program.deadlines.summer !== 'N/A'
+        ? program.deadlines.summer : program.deadlines.winter;
+
+      return (
+        <div className={`bg-[#161A20] border border-[#2A2F38] rounded-lg p-5 mb-4 transition-all card-hover tier-${tier}`}>
+          <div className="flex justify-between items-start mb-2">
+            <div>
+              <h3 className="text-lg font-semibold">{uni.name}</h3>
+              <p className="text-sm text-[#8A9099]">{uni.city}, {uni.state}{uni.qs_ranking_cs ? ` · QS #${uni.qs_ranking_cs} CS` : ''}</p>
+            </div>
+            <span className={`font-mono text-xs uppercase tracking-widest ${tierColor[tier]}`}>{tierLabel[tier]}</span>
+          </div>
+          <p className="text-sm text-[#8A9099] mb-4">{program.name} · {program.language} · {program.intake.join(' + ')} intake</p>
+
+          <div className="space-y-1.5 mb-4">
+            {passes.map((p, i) => (
+              <p key={`p${i}`} className="text-sm text-green-400">✓ {p.detail}</p>
+            ))}
+            {issues.map((iss, i) => (
+              <p key={`i${i}`} className="text-sm text-red-400">✗ {iss.detail}</p>
+            ))}
+          </div>
+
+          <div className="font-mono text-xs text-[#8A9099] space-y-1 border-t border-[#2A2F38] pt-3">
+            <p>Deadline: {deadline} · Apply via: {program.application_portal_url_label}</p>
+            <p>Tuition: Free · Semester fee: ~€{program.semester_contribution_eur}</p>
+          </div>
+        </div>
+      );
+    }
+
+    function UniversalChecklist({ showAPS, isBS }) {
+      const items = [
+        showAPS && 'APS Certificate (if applicable by nationality)',
+        'Valid Passport (min 6 months beyond study end)',
+        'Blocked account — €11,208/year (required for student visa)',
+        'Health Insurance (German statutory or recognized private)',
+        'Degree certificates + transcripts (officially translated to German or English)',
+        'Motivation Letter (1–2 pages, program-specific)',
+        'CV / Résumé (academic format)',
+        'Language certificate (IELTS / TOEFL for English programs; DSH / TestDaF for German)',
+        '2× Recommendation Letters (most MS programs)',
+        isBS && 'HZB Equivalency (verify degree recognized via anabin.kmk.org)',
+        'Student visa (applied at German embassy in home country after acceptance)'
+      ].filter(Boolean);
+
+      return (
+        <div className="bg-[#161A20] border border-[#2A2F38] rounded-lg p-5">
+          <h3 className="font-mono text-xs uppercase tracking-widest text-[#8A9099] mb-4">What you need to apply to Germany</h3>
+          <ul className="space-y-2">
+            {items.map((item, i) => (
+              <li key={i} className="text-sm text-[#8A9099] flex gap-2">
+                <span className="text-[#4A5260]">☐</span> {item}
+              </li>
+            ))}
+          </ul>
+        </div>
+      );
+    }
+
+    function ResultsView({ profile, prefs, results, summary, summaryUnavailable, onStartOver }) {
+      const [checklistOpen, setChecklistOpen] = useState(false);
+      const showAPS = APS_COUNTRIES.includes(profile.nationality) && !profile.aps_certified && !profile.aps_na;
+      const isBS = profile.degree_target === 'BS';
+
+      return (
+        <div className="max-w-[1100px] mx-auto px-4 py-8">
+          <div className="flex justify-between items-center mb-8">
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight">Your Results</h1>
+              <p className="text-[#8A9099] mt-1 font-mono text-sm">
+                {results.filter(r => r.tier === 'strong').length} strong · {results.filter(r => r.tier === 'borderline').length} borderline · {results.filter(r => r.tier === 'not_eligible').length} not eligible
+              </p>
+            </div>
+            <button onClick={onStartOver} className="bg-[#1E2229] border border-[#2A2F38] px-4 py-2 rounded-lg text-sm font-medium hover:bg-[#2A2F38] transition-colors">
+              Start Over
+            </button>
+          </div>
+
+          {showAPS && <APSBanner />}
+          {isBS && <BSWarningBanner />}
+          <ConsultationSummary text={summary} unavailable={summaryUnavailable} />
+
+          <div className="flex flex-col lg:flex-row gap-6">
+            <div className="hidden lg:block lg:w-[280px] flex-shrink-0">
+              <UniversalChecklist showAPS={showAPS} isBS={isBS} />
+            </div>
+
+            <div className="flex-1">
+              {results.length === 0 ? (
+                <p className="text-[#8A9099]">No matching programs found for your criteria. Try adjusting your field or language preferences.</p>
+              ) : (
+                results.map((r, i) => (
+                  <UniversityCard key={`${r.uni.id}-${r.program.name}-${i}`} result={r} preferredIntake={prefs.preferred_intake} />
+                ))
+              )}
+            </div>
+          </div>
+
+          <div className="lg:hidden mt-6">
+            <button onClick={() => setChecklistOpen(!checklistOpen)}
+              className="w-full bg-[#161A20] border border-[#2A2F38] rounded-lg p-4 text-left font-mono text-xs uppercase tracking-widest text-[#8A9099]">
+              {checklistOpen ? '▼' : '▶'} What you need to apply to Germany
+            </button>
+            {checklistOpen && <div className="mt-2"><UniversalChecklist showAPS={showAPS} isBS={isBS} /></div>}
+          </div>
+        </div>
+      );
+    }
+
+    function AppWrapper() {
+      const [screen, setScreen] = useState('landing');
+      const [step, setStep] = useState(1);
+      const [profile, setProfile] = useState({ ...INITIAL_PROFILE });
+      const [prefs, setPrefs] = useState({ ...INITIAL_PREFS });
+      const [loaderMsg, setLoaderMsg] = useState('Checking 12 universities...');
+      const [results, setResults] = useState([]);
+      const [summary, setSummary] = useState('');
+      const [summaryUnavailable, setSummaryUnavailable] = useState(false);
+
+      const runAnalysis = async () => {
+        setScreen('loading');
+        const msgs = ['Checking 12 universities...', 'Running gap analysis...', 'Writing your consultation...'];
+        let mi = 0;
+        const interval = setInterval(() => { mi = (mi + 1) % msgs.length; setLoaderMsg(msgs[mi]); }, 1200);
+
+        const germanGrade = convertGPA(profile.gpa_format, profile.gpa_value);
+        const fullProfile = {
+          nationality: profile.nationality,
+          degree_target: profile.degree_target,
+          field: profile.fields.join(', '),
+          fields: profile.fields,
+          gpa_german_equivalent: germanGrade,
+          german_grade: germanGrade,
+          ielts: profile.ielts_not_taken ? null : parseFloat(profile.ielts),
+          german_level: profile.german_level,
+          aps_certified: profile.aps_na ? true : profile.aps_certified,
+          has_bachelor: profile.has_bachelor,
+          preferred_intake: prefs.preferred_intake
+        };
+
+        const matchResults = filterAndMatch(fullProfile, prefs);
+        const matchSummary = buildMatchSummary(matchResults);
+
+        let aiSummary = '';
+        let unavailable = false;
+        try {
+          aiSummary = await callGroq({
+            nationality: fullProfile.nationality,
+            degree_target: fullProfile.degree_target,
+            field: fullProfile.field,
+            gpa_german_equivalent: fullProfile.gpa_german_equivalent,
+            ielts: fullProfile.ielts,
+            german_level: fullProfile.german_level,
+            aps_certified: profile.aps_certified
+          }, matchSummary);
+        } catch {
+          unavailable = true;
+        }
+
+        clearInterval(interval);
+        setResults(matchResults);
+        setSummary(aiSummary);
+        setSummaryUnavailable(unavailable);
+        setScreen('results');
+      };
+
+      const startOver = () => {
+        setProfile({ ...INITIAL_PROFILE });
+        setPrefs({ ...INITIAL_PREFS });
+        setStep(1);
+        setScreen('landing');
+        setResults([]);
+        setSummary('');
+        setSummaryUnavailable(false);
+      };
+
+      return (
+        <div className="min-h-screen">
+          {screen === 'landing' && (
+            <div className="max-w-[1100px] mx-auto px-4 py-16">
+              <div className="text-center mb-16 max-w-2xl mx-auto">
+                <p className="font-mono text-xs uppercase tracking-widest text-blue-400 mb-4">AdmitDE</p>
+                <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-4 leading-tight">
+                  Tell us your grades.<br />We'll tell you where you stand in Germany.
+                </h1>
+                <p className="text-[#8A9099] text-lg">AI-powered admission consultant for CS, AI & Data Science at German public universities.</p>
+                <button onClick={() => setScreen('form')}
+                  className="mt-8 bg-[#1D4ED8] hover:bg-blue-600 text-white font-semibold px-8 py-3 rounded-lg transition-colors">
+                  Check My Eligibility →
+                </button>
+              </div>
+            </div>
+          )}
+
+          {screen === 'form' && step === 1 && (
+            <div className="max-w-[1100px] mx-auto px-4 py-12">
+              <ProfileForm profile={profile} setProfile={setProfile} onNext={() => setStep(2)} />
+            </div>
+          )}
+
+          {screen === 'form' && step === 2 && (
+            <div className="max-w-[1100px] mx-auto px-4 py-12">
+              <PreferencesForm prefs={prefs} setPrefs={setPrefs} onBack={() => setStep(1)} onSubmit={runAnalysis} />
+            </div>
+          )}
+
+          {screen === 'loading' && <AnalysisLoader message={loaderMsg} />}
+
+          {screen === 'results' && (
+            <ResultsView
+              profile={{ ...profile, aps_certified: profile.aps_na ? true : profile.aps_certified }}
+              prefs={prefs}
+              results={results}
+              summary={summary}
+              summaryUnavailable={summaryUnavailable}
+              onStartOver={startOver}
+            />
+          )}
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<AppWrapper />);
+  </script>
+</body>
+</html>
