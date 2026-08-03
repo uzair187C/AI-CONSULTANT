@@ -3,52 +3,275 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>AdmitDE — Germany University Admissions</title>
+  <meta name="description" content="AI-powered Germany university admissions consultant. Find where you qualify for CS, AI & Data Science programs at German public universities." />
+  <title>AdmitDE — Germany University Admissions Consultant</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
   <style>
     :root {
-      --bg-primary: #0D0F12;
-      --bg-surface: #161A20;
-      --bg-elevated: #1E2229;
-      --border: #2A2F38;
-      --text-primary: #F0F2F5;
-      --text-secondary: #8A9099;
-      --text-muted: #4A5260;
-      --accent-green: #22C55E;
-      --accent-amber: #F59E0B;
-      --accent-red: #EF4444;
-      --accent-blue: #3B82F6;
-      --accent-blue-dim: #1D4ED8;
+      --bg-primary: #080A0E;
+      --bg-surface: #0F1318;
+      --bg-elevated: #161B23;
+      --bg-card: #111620;
+      --border: #1E2530;
+      --border-bright: #2A3444;
+      --text-primary: #EDF2F7;
+      --text-secondary: #7A8899;
+      --text-muted: #3D4A5C;
+      --accent-green: #10D97C;
+      --accent-green-dim: #064B2A;
+      --accent-amber: #F5A623;
+      --accent-amber-dim: #4A320A;
+      --accent-red: #F0564A;
+      --accent-red-dim: #4A1410;
+      --accent-blue: #4F8EF7;
+      --accent-blue-dim: #172B5E;
+      --accent-blue-bright: #2563EB;
+      --glow-blue: rgba(79,142,247,0.15);
+      --glow-green: rgba(16,217,124,0.12);
     }
-    * { box-sizing: border-box; }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
     body {
-      font-family: 'Inter', sans-serif;
+      font-family: 'Inter', -apple-system, sans-serif;
       background: var(--bg-primary);
       color: var(--text-primary);
-      margin: 0;
       min-height: 100vh;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
     }
-    .font-mono { font-family: 'JetBrains Mono', monospace; }
-    .tier-strong { border-left: 3px solid var(--accent-green); }
-    .tier-borderline { border-left: 3px solid var(--accent-amber); }
-    .tier-not_eligible { border-left: 3px solid var(--accent-red); }
-    .pill-active { background: var(--accent-blue-dim); color: white; }
-    .pill-inactive { background: var(--bg-elevated); color: var(--text-secondary); border: 1px solid var(--border); }
-    input:focus, select:focus, button:focus-visible {
-      outline: 2px solid var(--accent-blue);
-      outline-offset: 2px;
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background:
+        radial-gradient(ellipse 80% 50% at 20% -10%, rgba(37,99,235,0.08) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 40% at 80% 110%, rgba(16,217,124,0.05) 0%, transparent 50%);
+      pointer-events: none;
+      z-index: 0;
     }
-    @keyframes pulse-dot {
-      0%, 100% { opacity: 0.4; }
-      50% { opacity: 1; }
+    #root { position: relative; z-index: 1; }
+    /* Typography */
+    .font-mono { font-family: 'JetBrains Mono', 'Fira Code', monospace; }
+    .label-tag {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.65rem;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--text-secondary);
     }
-    .loader-dot { animation: pulse-dot 1.4s ease-in-out infinite; }
-    .loader-dot:nth-child(2) { animation-delay: 0.2s; }
-    .loader-dot:nth-child(3) { animation-delay: 0.4s; }
-    .card-hover:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.3); }
+    /* Nav */
+    .nav-bar {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      background: rgba(8,10,14,0.85);
+      backdrop-filter: blur(20px) saturate(180%);
+      -webkit-backdrop-filter: blur(20px) saturate(180%);
+      border-bottom: 1px solid var(--border);
+      padding: 0 2rem;
+      height: 56px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    /* Cards */
+    .glass-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      transition: all 0.25s cubic-bezier(0.4,0,0.2,1);
+    }
+    .glass-card:hover {
+      border-color: var(--border-bright);
+      transform: translateY(-3px);
+      box-shadow: 0 20px 60px rgba(0,0,0,0.4), 0 0 0 1px rgba(79,142,247,0.05);
+    }
+    /* Tier borders */
+    .tier-strong  { border-left: 4px solid var(--accent-green) !important; }
+    .tier-borderline { border-left: 4px solid var(--accent-amber) !important; }
+    .tier-not_eligible { border-left: 4px solid var(--accent-red) !important; }
+    /* Tier glow backgrounds */
+    .tier-strong-bg  { background: linear-gradient(135deg, rgba(16,217,124,0.04) 0%, transparent 50%); }
+    .tier-borderline-bg { background: linear-gradient(135deg, rgba(245,166,35,0.04) 0%, transparent 50%); }
+    .tier-not_eligible-bg { background: linear-gradient(135deg, rgba(240,86,74,0.04) 0%, transparent 50%); }
+    /* Pills / Toggle buttons */
+    .pill {
+      padding: 0.45rem 1rem;
+      border-radius: 100px;
+      font-size: 0.8rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.18s cubic-bezier(0.4,0,0.2,1);
+      border: 1px solid transparent;
+      white-space: nowrap;
+      user-select: none;
+    }
+    .pill-active {
+      background: var(--accent-blue-bright);
+      color: #fff;
+      border-color: rgba(79,142,247,0.3);
+      box-shadow: 0 0 16px rgba(37,99,235,0.35);
+    }
+    .pill-inactive {
+      background: var(--bg-elevated);
+      color: var(--text-secondary);
+      border-color: var(--border);
+    }
+    .pill-inactive:hover {
+      background: var(--bg-card);
+      color: var(--text-primary);
+      border-color: var(--border-bright);
+    }
+    /* Inputs */
+    .field-input {
+      width: 100%;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 0.75rem 1rem;
+      color: var(--text-primary);
+      font-family: 'Inter', sans-serif;
+      font-size: 0.9rem;
+      transition: all 0.2s;
+      outline: none;
+      appearance: none;
+      -webkit-appearance: none;
+    }
+    .field-input:focus {
+      border-color: var(--accent-blue);
+      background: var(--bg-card);
+      box-shadow: 0 0 0 3px rgba(79,142,247,0.12);
+    }
+    .field-input::placeholder { color: var(--text-muted); }
+    .field-input.error { border-color: var(--accent-red); box-shadow: 0 0 0 3px rgba(240,86,74,0.12); }
+    select.field-input {
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%237A8899'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 0.85rem center;
+      background-size: 16px;
+      padding-right: 2.5rem;
+    }
+    /* Primary button */
+    .btn-primary {
+      background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%);
+      color: #fff;
+      font-weight: 600;
+      font-size: 0.9rem;
+      padding: 0.85rem 2rem;
+      border-radius: 10px;
+      border: none;
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.4,0,0.2,1);
+      box-shadow: 0 4px 20px rgba(37,99,235,0.3);
+      width: 100%;
+      letter-spacing: 0.01em;
+    }
+    .btn-primary:hover {
+      background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%);
+      transform: translateY(-1px);
+      box-shadow: 0 8px 30px rgba(37,99,235,0.4);
+    }
+    .btn-primary:active { transform: translateY(0); }
+    .btn-secondary {
+      background: var(--bg-elevated);
+      color: var(--text-primary);
+      font-weight: 500;
+      font-size: 0.9rem;
+      padding: 0.85rem 1.5rem;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-secondary:hover { background: var(--bg-card); border-color: var(--border-bright); }
+    /* Loader */
+    @keyframes spin-ring {
+      to { transform: rotate(360deg); }
+    }
+    @keyframes fade-up {
+      from { opacity: 0; transform: translateY(16px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes shimmer {
+      0% { background-position: -200% 0; }
+      100% { background-position: 200% 0; }
+    }
+    @keyframes float {
+      0%, 100% { transform: translateY(0px); }
+      50% { transform: translateY(-8px); }
+    }
+    @keyframes pulse-glow {
+      0%, 100% { box-shadow: 0 0 20px rgba(79,142,247,0.2); }
+      50% { box-shadow: 0 0 40px rgba(79,142,247,0.5); }
+    }
+    .animate-fade-up { animation: fade-up 0.5s ease both; }
+    .animate-float { animation: float 3s ease-in-out infinite; }
+    .spin-ring {
+      width: 48px; height: 48px;
+      border: 3px solid var(--border);
+      border-top-color: var(--accent-blue);
+      border-radius: 50%;
+      animation: spin-ring 0.9s linear infinite;
+    }
+    /* Step indicator */
+    .step-line {
+      height: 2px;
+      width: 48px;
+      background: linear-gradient(90deg, var(--accent-blue) 0%, var(--border) 100%);
+    }
+    /* Check / Cross icons */
+    .req-pass { color: var(--accent-green); }
+    .req-fail { color: var(--accent-red); }
+    /* Tier badge */
+    .badge {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.62rem;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      padding: 0.25rem 0.65rem;
+      border-radius: 6px;
+    }
+    .badge-strong  { background: var(--accent-green-dim); color: var(--accent-green); }
+    .badge-borderline { background: var(--accent-amber-dim); color: var(--accent-amber); }
+    .badge-not_eligible { background: var(--accent-red-dim); color: var(--accent-red); }
+    /* Checklist item */
+    .checklist-item {
+      display: flex; gap: 0.6rem; align-items: flex-start;
+      padding: 0.5rem 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.82rem;
+      color: var(--text-secondary);
+    }
+    .checklist-item:last-child { border-bottom: none; }
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg-primary); }
+    ::-webkit-scrollbar-thumb { background: var(--border-bright); border-radius: 3px; }
+    /* Hero gradient text */
+    .gradient-text {
+      background: linear-gradient(135deg, #EDF2F7 0%, #93C5FD 50%, #60A5FA 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    /* Stat pills */
+    .stat-chip {
+      display: inline-flex; align-items: center; gap: 0.4rem;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: 100px;
+      padding: 0.3rem 0.85rem;
+      font-size: 0.78rem;
+      color: var(--text-secondary);
+    }
+    /* Form progress */
+    .progress-bar {
+      height: 2px;
+      background: linear-gradient(90deg, var(--accent-blue) 0%, rgba(79,142,247,0.2) 100%);
+      transition: width 0.4s ease;
+      border-radius: 1px;
+    }
   </style>
 </head>
 <body>
@@ -57,12 +280,14 @@
   <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <!-- API key loaded from config.js (gitignored) -->
+  <script src="config.js" onerror="window.GROQ_API_KEY='';"></script>
 
   <script type="text/babel">
-    const { useState, useEffect } = React;
+    const { useState, useEffect, useRef } = React;
 
-    // Paste your Groq API key here or leave empty to use pre-computed analysis
-    const GROQ_API_KEY = '';
+    // Reads key from config.js (gitignored). Fallback to empty = AI summary disabled.
+    const API_KEY = (typeof GROQ_API_KEY !== 'undefined') ? GROQ_API_KEY : '';
 
     const APS_COUNTRIES = ['Pakistan', 'India', 'China', 'Vietnam', 'Mongolia'];
     const FIELD_OPTIONS = ['CS', 'AI', 'Data Science', 'SE'];
@@ -477,15 +702,15 @@
 
           <div className="space-y-5">
             <div>
-              <label className="font-mono text-xs uppercase tracking-widest text-[#8A9099] block mb-2">Nationality</label>
+              <label className="label-tag block mb-2">Nationality</label>
               <select value={profile.nationality} onChange={e => setProfile(p => ({ ...p, nationality: e.target.value }))}
-                className="w-full bg-[#161A20] border border-[#2A2F38] rounded-lg px-4 py-3 text-[#F0F2F5]">
+                className="field-input">
                 {NATIONALITIES.map(n => <option key={n} value={n}>{n}</option>)}
               </select>
             </div>
 
             <div>
-              <label className="font-mono text-xs uppercase tracking-widest text-[#8A9099] block mb-2">Applying for</label>
+              <label className="label-tag block mb-2">Applying for</label>
               <div className="flex gap-2">
                 {['BS', 'MS'].map(d => (
                   <Pill key={d} active={profile.degree_target === d} onClick={() => setProfile(p => ({ ...p, degree_target: d }))}>{d}</Pill>
@@ -495,7 +720,7 @@
 
             {profile.degree_target === 'MS' && (
               <div>
-                <label className="font-mono text-xs uppercase tracking-widest text-[#8A9099] block mb-2">Completed Bachelor's?</label>
+                <label className="label-tag block mb-2">Completed Bachelor's?</label>
                 <div className="flex gap-2 flex-wrap">
                   {[['Yes', 'yes'], ['No', 'no'], ['In progress', 'progress']].map(([label, val]) => (
                     <Pill key={label} active={profile.bachelor_status === val}
@@ -506,7 +731,7 @@
             )}
 
             <div>
-              <label className="font-mono text-xs uppercase tracking-widest text-[#8A9099] block mb-2">GPA Format</label>
+              <label className="label-tag block mb-2">GPA Format</label>
               <div className="flex gap-2 flex-wrap mb-3">
                 {[['percentage', 'Percentage'], ['4.0', '4.0 Scale'], ['german', 'German 1–5']].map(([k, l]) => (
                   <Pill key={k} active={profile.gpa_format === k} onClick={() => setProfile(p => ({ ...p, gpa_format: k }))}>{l}</Pill>
@@ -515,32 +740,32 @@
               <input type="number" step="0.01" value={profile.gpa_value}
                 onChange={e => setProfile(p => ({ ...p, gpa_value: e.target.value }))}
                 placeholder={profile.gpa_format === 'percentage' ? 'e.g. 80' : profile.gpa_format === '4.0' ? 'e.g. 3.5' : 'e.g. 2.2'}
-                className={`w-full bg-[#161A20] border rounded-lg px-4 py-3 text-[#F0F2F5] ${errors.gpa ? 'border-red-500' : 'border-[#2A2F38]'}`} />
+                className={`field-input ${errors.gpa ? 'error' : ''}`} />
               {errors.gpa && <p className="text-red-400 text-sm mt-1">{errors.gpa}</p>}
             </div>
 
             <div>
-              <label className="font-mono text-xs uppercase tracking-widest text-[#8A9099] block mb-2">IELTS Score</label>
+              <label className="label-tag block mb-2">IELTS Score</label>
               <div className="flex gap-2 items-center">
                 <input type="number" step="0.5" min="0" max="9" value={profile.ielts} disabled={profile.ielts_not_taken}
                   onChange={e => setProfile(p => ({ ...p, ielts: e.target.value }))}
                   placeholder="e.g. 6.5"
-                  className={`flex-1 bg-[#161A20] border rounded-lg px-4 py-3 text-[#F0F2F5] ${errors.ielts ? 'border-red-500' : 'border-[#2A2F38]'} ${profile.ielts_not_taken ? 'opacity-50' : ''}`} />
+                  className={`field-input flex-1 ${errors.ielts ? 'error' : ''} ${profile.ielts_not_taken ? 'opacity-50' : ''}`} />
                 <Pill active={profile.ielts_not_taken} onClick={() => setProfile(p => ({ ...p, ielts_not_taken: !p.ielts_not_taken, ielts: '' }))}>Not taken</Pill>
               </div>
               {errors.ielts && <p className="text-red-400 text-sm mt-1">{errors.ielts}</p>}
             </div>
 
             <div>
-              <label className="font-mono text-xs uppercase tracking-widest text-[#8A9099] block mb-2">German Language Level</label>
+              <label className="label-tag block mb-2">German Language Level</label>
               <select value={profile.german_level} onChange={e => setProfile(p => ({ ...p, german_level: e.target.value }))}
-                className="w-full bg-[#161A20] border border-[#2A2F38] rounded-lg px-4 py-3 text-[#F0F2F5]">
+                className="field-input">
                 {GERMAN_LEVELS.map(l => <option key={l} value={l}>{l}</option>)}
               </select>
             </div>
 
             <div>
-              <label className="font-mono text-xs uppercase tracking-widest text-[#8A9099] block mb-2">APS Certificate</label>
+              <label className="label-tag block mb-2">APS Certificate</label>
               <div className="flex gap-2 flex-wrap">
                 <Pill active={profile.aps_certified && !profile.aps_na} onClick={() => setProfile(p => ({ ...p, aps_certified: true, aps_na: false }))}>Yes</Pill>
                 <Pill active={!profile.aps_certified && !profile.aps_na} onClick={() => setProfile(p => ({ ...p, aps_certified: false, aps_na: false }))}>No</Pill>
@@ -549,7 +774,7 @@
             </div>
 
             <div>
-              <label className="font-mono text-xs uppercase tracking-widest text-[#8A9099] block mb-2">Target Field</label>
+              <label className="label-tag block mb-2">Target Field</label>
               <div className="flex gap-2 flex-wrap">
                 {FIELD_OPTIONS.map(f => (
                   <Pill key={f} active={profile.fields.includes(f)} onClick={() => toggleField(f)}>{f}</Pill>
@@ -559,7 +784,7 @@
           </div>
 
           <button onClick={handleNext}
-            className="mt-8 w-full bg-[#1D4ED8] hover:bg-blue-600 text-white font-semibold py-3 rounded-lg transition-colors">
+            className="mt-8 btn-primary">
             Continue to Preferences →
           </button>
         </div>
@@ -586,7 +811,7 @@
 
           <div className="space-y-5">
             <div>
-              <label className="font-mono text-xs uppercase tracking-widest text-[#8A9099] block mb-2">Preferred City</label>
+              <label className="label-tag block mb-2">Preferred City</label>
               <div className="flex gap-2 flex-wrap">
                 {CITY_OPTIONS.map(c => (
                   <Pill key={c} active={prefs.cities.includes(c)} onClick={() => toggleCity(c)}>{c}</Pill>
@@ -595,7 +820,7 @@
             </div>
 
             <div>
-              <label className="font-mono text-xs uppercase tracking-widest text-[#8A9099] block mb-2">Semester Intake</label>
+              <label className="label-tag block mb-2">Semester Intake</label>
               <div className="flex gap-2">
                 {['Winter', 'Summer', 'Both'].map(i => (
                   <Pill key={i} active={prefs.preferred_intake === i} onClick={() => setPrefs(p => ({ ...p, preferred_intake: i }))}>{i}</Pill>
@@ -604,7 +829,7 @@
             </div>
 
             <div>
-              <label className="font-mono text-xs uppercase tracking-widest text-[#8A9099] block mb-2">Language of Instruction</label>
+              <label className="label-tag block mb-2">Language of Instruction</label>
               <div className="flex gap-2">
                 {['German', 'English', 'Both'].map(l => (
                   <Pill key={l} active={prefs.language_pref === l} onClick={() => setPrefs(p => ({ ...p, language_pref: l }))}>{l}</Pill>
@@ -614,8 +839,8 @@
           </div>
 
           <div className="flex gap-3 mt-8">
-            <button onClick={onBack} className="flex-1 bg-[#1E2229] border border-[#2A2F38] text-[#F0F2F5] font-semibold py-3 rounded-lg">← Back</button>
-            <button onClick={onSubmit} className="flex-1 bg-[#1D4ED8] hover:bg-blue-600 text-white font-semibold py-3 rounded-lg">Run Analysis →</button>
+            <button onClick={onBack} className="flex-1 btn-secondary">← Back</button>
+            <button onClick={onSubmit} className="flex-1 btn-primary">Run Analysis →</button>
           </div>
         </div>
       );
@@ -673,28 +898,33 @@
         ? program.deadlines.summer : program.deadlines.winter;
 
       return (
-        <div className={`bg-[#161A20] border border-[#2A2F38] rounded-lg p-5 mb-4 transition-all card-hover tier-${tier}`}>
+        <div className={`glass-card p-5 mb-4 tier-${tier} tier-${tier}-bg relative overflow-hidden group`}>
           <div className="flex justify-between items-start mb-2">
             <div>
-              <h3 className="text-lg font-semibold">{uni.name}</h3>
+              <h3 className="text-lg font-semibold group-hover:text-blue-400 transition-colors">{uni.name}</h3>
               <p className="text-sm text-[#8A9099]">{uni.city}, {uni.state}{uni.qs_ranking_cs ? ` · QS #${uni.qs_ranking_cs} CS` : ''}</p>
             </div>
-            <span className={`font-mono text-xs uppercase tracking-widest ${tierColor[tier]}`}>{tierLabel[tier]}</span>
+            <span className={`badge badge-${tier}`}>{tierLabel[tier]}</span>
           </div>
-          <p className="text-sm text-[#8A9099] mb-4">{program.name} · {program.language} · {program.intake.join(' + ')} intake</p>
+          <p className="text-sm text-[#8A9099] mb-4 font-mono text-xs"><span className="text-[#F0F2F5]">{program.name}</span> · {program.language} · {program.intake.join(' + ')} intake</p>
 
           <div className="space-y-1.5 mb-4">
             {passes.map((p, i) => (
-              <p key={`p${i}`} className="text-sm text-green-400">✓ {p.detail}</p>
+              <p key={`p${i}`} className="text-sm text-green-400 flex items-start gap-1.5"><span className="mt-0.5">✓</span> {p.detail}</p>
             ))}
             {issues.map((iss, i) => (
-              <p key={`i${i}`} className="text-sm text-red-400">✗ {iss.detail}</p>
+              <p key={`i${i}`} className="text-sm text-red-400 flex items-start gap-1.5"><span className="mt-0.5">✗</span> {iss.detail}</p>
             ))}
           </div>
 
-          <div className="font-mono text-xs text-[#8A9099] space-y-1 border-t border-[#2A2F38] pt-3">
-            <p>Deadline: {deadline} · Apply via: {program.application_portal_url_label}</p>
-            <p>Tuition: Free · Semester fee: ~€{program.semester_contribution_eur}</p>
+          <div className="font-mono text-xs text-[#8A9099] border-t border-[#2A2F38] pt-4 flex flex-wrap justify-between items-center gap-3">
+            <div className="space-y-1">
+              <p>Deadline: <span className="text-[#F0F2F5]">{deadline}</span></p>
+              <p>Fee: <span className="text-[#F0F2F5]">~€{program.semester_contribution_eur}</span></p>
+            </div>
+            <a href="#" className="btn-secondary px-3 py-1.5 text-xs text-blue-400 border-blue-500/20 hover:bg-blue-500/10 hover:border-blue-500/30 text-center">
+              {program.application_portal_url_label} ↗
+            </a>
           </div>
         </div>
       );
@@ -736,15 +966,17 @@
 
       return (
         <div className="max-w-[1100px] mx-auto px-4 py-8">
-          <div className="flex justify-between items-center mb-8">
+          <div className="flex justify-between items-center mb-8 animate-fade-up">
             <div>
-              <h1 className="text-3xl font-bold tracking-tight">Your Results</h1>
-              <p className="text-[#8A9099] mt-1 font-mono text-sm">
-                {results.filter(r => r.tier === 'strong').length} strong · {results.filter(r => r.tier === 'borderline').length} borderline · {results.filter(r => r.tier === 'not_eligible').length} not eligible
-              </p>
+              <h1 className="text-3xl font-bold tracking-tight mb-2">Your Analysis <span className="text-blue-500">Ready</span></h1>
+              <div className="flex gap-2">
+                <span className="badge badge-strong">{results.filter(r => r.tier === 'strong').length} Strong</span>
+                <span className="badge badge-borderline">{results.filter(r => r.tier === 'borderline').length} Borderline</span>
+                <span className="badge badge-not_eligible">{results.filter(r => r.tier === 'not_eligible').length} Not Eligible</span>
+              </div>
             </div>
-            <button onClick={onStartOver} className="bg-[#1E2229] border border-[#2A2F38] px-4 py-2 rounded-lg text-sm font-medium hover:bg-[#2A2F38] transition-colors">
-              Start Over
+            <button onClick={onStartOver} className="btn-secondary text-sm px-4 py-2">
+              ⟲ Start Over
             </button>
           </div>
 
@@ -849,17 +1081,30 @@
       return (
         <div className="min-h-screen">
           {screen === 'landing' && (
-            <div className="max-w-[1100px] mx-auto px-4 py-16">
+            <div className="max-w-[1100px] mx-auto px-4 py-16 animate-fade-up">
               <div className="text-center mb-16 max-w-2xl mx-auto">
-                <p className="font-mono text-xs uppercase tracking-widest text-blue-400 mb-4">AdmitDE</p>
-                <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-4 leading-tight">
-                  Tell us your grades.<br />We'll tell you where you stand in Germany.
+                <div className="inline-block mb-6 relative">
+                  <div className="absolute inset-0 bg-blue-500 blur-xl opacity-20 rounded-full animate-pulse-glow"></div>
+                  <div className="relative bg-blue-500/10 border border-blue-500/20 text-blue-400 font-mono text-xs uppercase tracking-widest px-4 py-1.5 rounded-full">AdmitDE Intelligence</div>
+                </div>
+                <h1 className="text-5xl md:text-6xl font-extrabold tracking-tight mb-6 leading-[1.15]">
+                  <span className="text-white">Tell us your grades.</span><br />
+                  <span className="gradient-text">We'll tell you where you stand in Germany.</span>
                 </h1>
-                <p className="text-[#8A9099] text-lg">AI-powered admission consultant for CS, AI & Data Science at German public universities.</p>
-                <button onClick={() => setScreen('form')}
-                  className="mt-8 bg-[#1D4ED8] hover:bg-blue-600 text-white font-semibold px-8 py-3 rounded-lg transition-colors">
-                  Check My Eligibility →
-                </button>
+                <p className="text-[#8A9099] text-lg md:text-xl leading-relaxed mb-10 max-w-xl mx-auto">
+                  AI-powered admission consultant for CS, AI & Data Science at German public universities. Get a realistic gap analysis in seconds.
+                </p>
+                <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+                  <button onClick={() => setScreen('form')}
+                    className="btn-primary flex items-center justify-center gap-2 group w-full sm:w-auto">
+                    Check My Eligibility
+                    <span className="group-hover:translate-x-1 transition-transform">→</span>
+                  </button>
+                  <div className="stat-chip">
+                    <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+                    <span>12 Universities Covered</span>
+                  </div>
+                </div>
               </div>
             </div>
           )}
