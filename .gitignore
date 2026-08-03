@@ -1,4 +1,6 @@
 .vercel
 .env
 .env.local
+config.js
 *.log
+node_modules
